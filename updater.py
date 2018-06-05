@@ -77,17 +77,16 @@ def freeze():
 if initialFreeze:
     freeze()
 
-commitSHA = repo.head.reference.log()[0]
-
+commitSHA = repo.head.commit
 
 while True:
-    print("Sleeping for 30 seconds...")
-    sleep(30)
-
     print("Checking for changes...")
     repo.remotes.origin.pull(rebase=True)
-    newCommitSHA = repo.head.reference.log()[0]
+    newCommitSHA = repo.head.commit
 
     if commitSHA != newCommitSHA:
+        commitSHA = newCommitSHA
         freeze()
-    commitSHA = newCommitSHA
+
+    print("Sleeping for 30 seconds...")
+    sleep(30)
