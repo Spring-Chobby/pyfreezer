@@ -5,8 +5,10 @@
 # pip install PyQT5 pyinstaller
 
 import os
+import shutil
 from time import sleep
 import platform
+import subprocess
 
 from git import Repo
 
@@ -23,31 +25,13 @@ platformToDir = {
     "Windows": "windows"
 }
 
-
-
-if not os.path.exists(SL_REPO_DIR):
-    repo = Repo.clone_from(SL_REPO_URL, SL_REPO_DIR)
-    print("Initialized repository: {}.".format(SL_REPO_DIR))
-else:
-    repo = Repo(SL_REPO_DIR)
-    print("Loaded existing repository: {}.".format(SL_REPO_DIR))
-
-if not os.path.exists(SL_DIST_REPO_DIR):
-    repoDist = Repo.clone_from(SL_DIST_REPO_URL, SL_DIST_REPO_DIR)
-    print("Initialized repository: {}.".format(SL_DIST_REPO_DIR))
-else:
-    repoDist = Repo(SL_DIST_REPO_DIR)
-    print("Loaded existing repository: {}.".format(SL_DIST_REPO_DIR))
-
-
-commitSHA = repo.head.reference.log()[0]
+commitSHA = None
 
 def do_freeze():
     if os.name == 'posix':
         output = subprocess.run("bash freeze.sh", cwd=os.getcwd(), shell=True)
     elif os.name == 'nt':
-        # TODO
-        output = subprocess.run("bash freeze.bat", cwd=os.getcwd(), shell=True)
+        output = subprocess.run("freeze.bat", cwd=os.getcwd(), shell=True)
     else:
         print("Weird OS? {}".format(os.name))
 
@@ -60,10 +44,40 @@ def upload_freeze(distDir):
         shutil.rmtree(distDirPath)
     shutil.copytree(os.path.join(SL_REPO_DIR, "spring_launcher/dist/launcher"),
                     distDirPath)
+    print("Commiting and pushing the latest version")
     repoDist.git.add(A=True)
-    #repoDist.git.commit('-m', 'Sync {}: {}'.format(commitSHA, distDir), author='{}-bot <>'.format(distDir))
+    repoDist.git.commit('-m', 'Sync {}: {}'.format(commitSHA, distDir), author='{}-bot <>'.format(distDir))
     repoDist.remotes.origin.push()
     print("Pushed.")
+
+
+initialFreeze = False
+if not os.path.exists(SL_REPO_DIR):
+    repo = Repo.clone_from(SL_REPO_URL, SL_REPO_DIR)
+    print("Initialized repository: {}.".format(SL_REPO_DIR))
+    initialFreeze = True 
+else:
+    repo = Repo(SL_REPO_DIR)
+    print("Loaded existing repository: {}.".format(SL_REPO_DIR))
+
+if not os.path.exists(SL_DIST_REPO_DIR):
+    repoDist = Repo.clone_from(SL_DIST_REPO_URL, SL_DIST_REPO_DIR)
+    print("Initialized repository: {}.".format(SL_DIST_REPO_DIR))
+    initialFreeze = True 
+else:
+    repoDist = Repo(SL_DIST_REPO_DIR)
+    print("Loaded existing repository: {}.".format(SL_DIST_REPO_DIR))
+
+def freeze():
+    print("Changes detected. Freezing...")
+    do_freeze()
+    print("Preparing to commit new frozen version...")
+    upload_freeze(platformToDir[platform.system()])
+
+if initialFreeze:
+    freeze()
+
+commitSHA = repo.head.reference.log()[0]
 
 
 while True:
@@ -75,8 +89,5 @@ while True:
     newCommitSHA = repo.head.reference.log()[0]
 
     if commitSHA != newCommitSHA:
-        print("Changes detected. Freezing...")
-        do_freeze()
-        print("Preparing to commit new frozen version...")
-        upload_freeze(platformToDir[platform.system()])
+        freeze()
     commitSHA = newCommitSHA
