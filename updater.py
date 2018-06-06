@@ -2,7 +2,7 @@
 # Warning: Make sure this virtualenv is different from the env_build, so it doesn't pull unnecessary dependencies
 # virtualenv --python=/usr/bin/python3 env_build
 # source env_build/bin/activate
-# pip install PyQT5 pyinstaller requests
+# pip install PyQT5 pyinstaller requests psutil
 
 import os
 import shutil
