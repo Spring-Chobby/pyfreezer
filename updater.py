@@ -74,10 +74,10 @@ def freeze():
     print("Preparing to commit new frozen version...")
     upload_freeze(platformToDir[platform.system()])
 
+commitSHA = repo.head.commit
+
 if initialFreeze:
     freeze()
-
-commitSHA = repo.head.commit
 
 while True:
     print("Checking for changes...")
@@ -85,6 +85,7 @@ while True:
     newCommitSHA = repo.head.commit
 
     if commitSHA != newCommitSHA:
+        print("Old commit SHA: {}. New commit SHA: {}".format(commitSHA, newCommitSHA))
         commitSHA = newCommitSHA
         freeze()
 
